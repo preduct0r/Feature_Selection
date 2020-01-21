@@ -13,11 +13,13 @@ from sklearn.cluster import DBSCAN
 
 
 # достаем train, test данные
-with open("path_to_pickle", "rb") as f:                                                             # change path to base
+with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\vad_preprocessed.pkl", "rb") as f:                                                             # change path to base
     [x_train, x_test, y_train, y_test] = pickle.load(f)
 
 vecs = []
 for i in range(x_train.shape[1]):
+    if x_train.iloc[:,i].isna().any()==True:
+        print(i)
     vecs.append(x_train.iloc[:,i])
 corr_matrix = pd.DataFrame(np.corrcoef(vecs))
 
@@ -28,12 +30,11 @@ def func(x):
 # почему-то 0 и 1512 фича считаются некорректно
 corr_matrix = func(corr_matrix.drop(columns=[0,1512], index=[0,1512]))                # почему в одном месте 1512, в другом 1511?
 
-
 # разбиваем фичи по кластерам
 feature_indexes = list(range(x_train.shape[1]))
 del feature_indexes[0]
+# сначала удалили 0, поэтому 1511 вместо 1512
 del feature_indexes[1511]
-
 
 
 # Делаем кастомную affinity func
@@ -49,7 +50,7 @@ del feature_indexes[1511]
 # cluster.fit(np.array(feature_indexes).reshape(-1, 1))
 
 # Обучаем Agglomerative Clustering с "precomputed"
-cluster = AgglomerativeClustering(distance_threshold=0.1, affinity='precomputed', linkage='average')
+cluster = AgglomerativeClustering(n_clusters=None, distance_threshold=0.1, affinity='precomputed', linkage='average')
 cluster.fit(corr_matrix)                                                            # distance_threshold вместо n_cllusters
 
 # # Обучаем DBSCAN с новым affinity
@@ -100,8 +101,8 @@ df_clusters_info = df_clusters_info.loc[:,['label','value_count','max','mean','s
 
 
 # сохраняем сводную таблицу, матрицу корреляции и некоррелированные фичи
-with open("path_to_pickle", "wb") as f:                                                                    # path_to_pickles
+with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\best_indexes.pkl", "wb") as f:                                                                    # path_to_pickles
     pickle.dump(best_indexes, f)
-zz.to_csv(r"C:\Users\preductor\Documents\top10_opensmile\best_features_corr_matrix.csv", index=True)
-df_clusters_info.to_csv(r"C:\Users\preductor\Documents\top10_opensmile\df_clusters_info.csv", index=False)
+zz.to_csv(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\best_features_corr_matrix.csv", index=True)
+df_clusters_info.to_csv(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\df_clusters_info.csv", index=False)
 # print(pd.read_csv(r"C:\Users\kotov-d\Documents\TASKS\task#7\best_features_corr_matrix.csv", index_col=0).iloc[:10,:10])

@@ -4,6 +4,8 @@ warnings.filterwarnings("ignore")
 from sklearn.linear_model import Lasso
 from sklearn.feature_selection import RFE
 from sklearn.model_selection import cross_val_score
+from sklearn.metrics import f1_score, classification_report, precision_score
+
 from sklearn.svm import SVC
 import pickle
 import pandas as pd
@@ -16,17 +18,8 @@ with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\vad_preprocessed.
 X = x_train.append(x_test, ignore_index=True)
 y = y_train.append(y_test)
 
-print(X.shape, y.shape)
-print(np.unique(y, return_counts=True))
 
-# lasso = Lasso(normalize=True, random_state=0)
-# lasso.fit(x_train, y_train)
-#
-# lasso-это регрессионная модель, поэтому чтобы вывести коэффициенты надо интерпретировать ее как классификатор, что не есть хорошо
-# print(lasso.coef_)
 
-#================================================================================================================
-#================================================================================================================
 # Sequential Forward Selection (SFS)
 # код взят здесь
 # https://nbviewer.jupyter.org/github/rasbt/pattern_classification/blob/master/dimensionality_reduction/feature_selection/sequential_selection_algorithms.ipynb
@@ -61,6 +54,7 @@ def seq_forw_select(features, max_k, criterion_func, print_steps=False):
         best_feat = features[0]
         for x in features[1:]:
             crit_func_eval = criterion_func(feat_sub + [x])
+            print()
             if crit_func_eval > crit_func_max:
                 crit_func_max = crit_func_eval
                 best_feat = x
@@ -76,9 +70,17 @@ def seq_forw_select(features, max_k, criterion_func, print_steps=False):
 
     return feat_sub
 
-def criterion_func(features, X= X, y= y):
+def criterion_func(features, x_train, x_test, y_train, y_test):
     clf = SVC(gamma=0.1, C=10)
     clf.fit(X.loc[:,features], y)
-    return np.mean(cross_val_score(clf, X, y, scoring='f1_macro',  cv=3))
 
-seq_forw_select(x_train.columns, 2, criterion_func, print_steps=True)
+    pred = clf.predict(x_test)
+    print(np.unique(pred, return_counts=True))
+
+    clf.fit(x_train, y_train)
+    score = f1_score(pred,y_test)
+    print(score)
+
+    return score
+
+seq_forw_select(list(x_train.columns), 10, criterion_func, print_steps=True)
