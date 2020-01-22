@@ -14,6 +14,8 @@ from sklearn.decomposition import PCA
 with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\iemocap_preprocessed.pkl", "rb") as f:
     [x_train, x_test, y_train, y_test] = pickle.load(f)
 
+compare_table = pd.DataFrame(columns=['PCA', 'feat_impo_lgbm', 'shan_tree', 'feat_impo_xgb'],
+                             index=['ground truth values', 'recieved values','f1 macro'])
 
 # проверка с помощью обучения lightgbm на разных фичах
 def select_features(x_train, y_train, x_test, y_test):
@@ -26,17 +28,15 @@ def select_features(x_train, y_train, x_test, y_test):
 
     pca = PCA(n_components=100)
     full_df = x_train.append(x_test, ignore_index=True)
-    print(full_df.shape)
     x_pca = pca.fit_transform(full_df)
     x_pca_train, x_pca_test = pd.DataFrame(x_pca[:x_train.shape[0], :]), pd.DataFrame(x_pca[x_train.shape[0]:, :])
 
     clf.fit(x_pca_train, y_train)
     pred = clf.predict(x_pca_test)
 
-    print('PCA')
-    print('ground truth values: ', np.unique(y_test, return_counts=True))
-    print('recieved values: ', np.unique(pred, return_counts=True))
-    print(round(f1_score(y_test, pred, average='macro'), 3))
+    compare_table.loc['ground truth values', 'PCA'] = np.unique(y_test, return_counts=True)
+    compare_table.loc['recieved values', 'PCA'] = np.unique(pred, return_counts=True)
+    compare_table.loc['f1 macro', 'PCA'] = round(f1_score(y_test, pred, average='macro'), 3)
 
     for col in ['feat_impo_lgbm', 'shan_tree', 'feat_impo_xgb']:
         best_features = df[col].tolist()[:100]
@@ -45,13 +45,16 @@ def select_features(x_train, y_train, x_test, y_test):
 
         pred = clf.predict(x_test.loc[:,best_features])
 
-        print(col)
-        print(best_features)
-        print('ground truth values: ', np.unique(y_test, return_counts=True))
-        print('recieved values: ', np.unique(pred, return_counts=True))
-        print(round(f1_score(y_test, pred, average='macro'),3))
+
+        compare_table.loc['ground truth values', col] = np.unique(y_test, return_counts=True)
+        compare_table.loc['recieved values', col] = np.unique(pred, return_counts=True)
+        compare_table.loc['f1 macro', col] = round(f1_score(y_test, pred, average='macro'),3)
+
+    compare_table.to_csv(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\compare_table.csv")
+
 
 select_features(x_train, y_train, x_test, y_test)
+
 
 
 
