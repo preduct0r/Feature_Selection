@@ -4,6 +4,7 @@ import pandas as pd
 from lightgbm import LGBMClassifier
 from sklearn.metrics import f1_score, classification_report, precision_score
 from prepare_data_with_two_labels import load_iemocap
+from sklearn.decomposition import PCA
 
 # # достаем train, test данные из telecom-vad и best_indexes
 # with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\vad_preprocessed.pkl", "rb") as f:
@@ -13,42 +14,45 @@ from prepare_data_with_two_labels import load_iemocap
 with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\iemocap_preprocessed.pkl", "rb") as f:
     [x_train, x_test, y_train, y_test] = pickle.load(f)
 
-with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\best_indexes.pkl", "rb") as f:
-    best_indexes = pickle.load(f)
-
 
 # проверка с помощью обучения lightgbm на разных фичах
-cur_pred = 0
 def select_features(x_train, y_train, x_test, y_test):
-    clf = LGBMClassifier(boosting_type='gbdt', num_leaves=31, max_depth=-1, learning_rate=0.001, n_estimators=1000,
+    clf = LGBMClassifier(boosting_type='gbdt', num_leaves=31, max_depth=-1, learning_rate=0.001, n_estimators=3000,
                              objective=None, min_split_gain=0, min_child_weight=3, min_child_samples=10, subsample=0.8,
                              subsample_freq=1, colsample_bytree=0.7, reg_alpha=0.3, reg_lambda=0, seed=17)
-    clf.fit(x_train, y_train)
 
-    print(len(clf.feature_importances_))
+    df = pd.read_csv(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\range_features(telecom).csv")
 
-    dict_importance = {}
-    for feature, importance in zip(x_train.columns, clf.feature_importances_):
-        dict_importance[feature] = importance
 
-    best_lgbm_features = []
+    pca = PCA(n_components=100)
+    full_df = x_train.append(x_test, ignore_index=True)
+    print(full_df.shape)
+    x_pca = pca.fit_transform(full_df)
+    x_pca_train, x_pca_test = pd.DataFrame(x_pca[:x_train.shape[0], :]), pd.DataFrame(x_pca[x_train.shape[0]:, :])
 
-    for idx, w in enumerate(sorted(dict_importance, key=dict_importance.get, reverse=True)):
-        if idx == 100:
-            break
-        best_lgbm_features.append(w)
+    clf.fit(x_pca_train, y_train)
+    pred = clf.predict(x_pca_test)
 
-    clf.fit(x_train.loc[:,best_lgbm_features], y_train)
-
-    pred = clf.predict(x_test.loc[:,best_lgbm_features])
-
+    print('PCA')
     print('ground truth values: ', np.unique(y_test, return_counts=True))
     print('recieved values: ', np.unique(pred, return_counts=True))
-    print(round(f1_score(y_test, pred, average='macro'),3))
+    print(round(f1_score(y_test, pred, average='macro'), 3))
 
-                                                        # у нас 2200 фичей и 600 примеров, конечно все пойдет в нейтраль!!
+    for col in ['feat_impo_lgbm', 'shan_tree', 'feat_impo_xgb']:
+        best_features = df[col].tolist()[:100]
+
+        clf.fit(x_train.loc[:,best_features], y_train)
+
+        pred = clf.predict(x_test.loc[:,best_features])
+
+        print(col)
+        print(best_features)
+        print('ground truth values: ', np.unique(y_test, return_counts=True))
+        print('recieved values: ', np.unique(pred, return_counts=True))
+        print(round(f1_score(y_test, pred, average='macro'),3))
+
 select_features(x_train, y_train, x_test, y_test)
-select_features(x_train.iloc[:,best_indexes], y_train, x_test.iloc[:,best_indexes], y_test)
+
 
 
 
