@@ -6,13 +6,13 @@ from sklearn.metrics import f1_score, classification_report, precision_score
 from prepare_data_with_two_labels import load_iemocap
 from sklearn.decomposition import PCA
 
-# # достаем train, test данные из telecom-vad и best_indexes
-# with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\vad_preprocessed.pkl", "rb") as f:
-#     [x_train, x_test, y_train, y_test] = pickle.load(f)
-
-# попытка использовать IEMOCAP
-with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\iemocap_preprocessed.pkl", "rb") as f:
+# достаем train, test данные из telecom-vad и best_indexes
+with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\vad_preprocessed.pkl", "rb") as f:
     [x_train, x_test, y_train, y_test] = pickle.load(f)
+
+# # попытка использовать IEMOCAP
+# with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\iemocap_preprocessed.pkl", "rb") as f:
+#     [x_train, x_test, y_train, y_test] = pickle.load(f)
 
 compare_table = pd.DataFrame(columns=['PCA', 'feat_impo_lgbm', 'shan_tree', 'feat_impo_xgb'],
                              index=['ground truth values', 'recieved values','f1 macro'])
@@ -50,7 +50,7 @@ def select_features(x_train, y_train, x_test, y_test):
         compare_table.loc['recieved values', col] = np.unique(pred, return_counts=True)
         compare_table.loc['f1 macro', col] = round(f1_score(y_test, pred, average='macro'),3)
 
-    compare_table.to_csv(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\compare_table.csv")
+    compare_table.to_csv(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\compare_table(telecom).csv")
 
 
 select_features(x_train, y_train, x_test, y_test)
