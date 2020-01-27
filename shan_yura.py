@@ -39,27 +39,28 @@ for xXx in os.listdir(path_to_features):
     try:
         for col in df.columns:
             if col == 'shan_tree':
-                try:
-                    zz = shap.TreeExplainer(lgbm, x_test)
-                    # shap_values = np.mean(abs(zz.shap_values(x_test)), axis=0)
-                    shap_values = zz.shap_values(x_test)
+                if xXx!='opensmile_avec2013_long.pkl' and xXx!='opensmile_IS13_ComParE_long.pkl':
+                    try:
+                        zz = shap.TreeExplainer(lgbm, x_test)
+                        # shap_values = np.mean(abs(zz.shap_values(x_test)), axis=0)
+                        shap_values = zz.shap_values(x_test)
 
-                    temp_df = pd.DataFrame(columns=['col_idx', 'mean'], index=range(x_test.shape[1]))
-                    temp_df['col_idx'] = x_test.columns
-                    # df['mean'] = shap_values
+                        temp_df = pd.DataFrame(columns=['col_idx', 'mean'], index=range(x_test.shape[1]))
+                        temp_df['col_idx'] = x_test.columns
+                        # df['mean'] = shap_values
 
-                    means = []
-                    for idx, row in df.iterrows():
-                        means.append(np.mean(abs(shap_values[:, idx])))
+                        means = []
+                        for idx, row in df.iterrows():
+                            means.append(np.mean(abs(shap_values[:, idx])))
 
-                    temp_df['mean'] = means
+                        temp_df['mean'] = means
 
-                    temp_df.sort_values(by='mean', ascending=False, inplace=True, axis=0)
+                        temp_df.sort_values(by='mean', ascending=False, inplace=True, axis=0)
 
-                    df[col] = temp_df.col_idx.tolist()
+                        df[col] = temp_df.col_idx.tolist()
 
-                except:
-                    pass
+                    except:
+                        pass
 
 
             if col == 'feat_impo_xgb':
@@ -95,7 +96,7 @@ for xXx in os.listdir(path_to_features):
     except:
         pass
 
-    df.iloc[:1000, :].to_csv(os.path.join(path_to_calculated, xXx[:-4] + '.csv'), index=False)
+    df.iloc[:1000, :].to_csv(os.path.join(path_to_calculated, xXx[:-4] + '2.csv'), index=False)
 
 
 

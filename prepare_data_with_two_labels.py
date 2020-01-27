@@ -6,7 +6,7 @@ import pandas as pd
 
 def load_vad():
     base_dir = r'C:\Users\kotov-d\Documents\BASES'                                                   # path_to_bases
-    features_path = os.path.join(base_dir, 'telecom_vad', 'feature', 'opensmile')
+    features_path = os.path.join(base_dir, 'undefined_base', 'feature', 'opensmile')
 
 
     with open(os.path.join(features_path, 'x_train.pkl'), 'rb') as f:
@@ -67,7 +67,7 @@ def load_iemocap():
         pickle.dump([x_train, x_test, y_train, y_test], f)
 
 def load_general(xXx):
-    feature_dir = r'C:\Users\kotov-d\Documents\BASES\telecom_vad\feature'
+    feature_dir = r'C:\Users\kotov-d\Documents\BASES\undefined_base\feature'
     features_path = os.path.join(feature_dir, xXx)
 
     with open(os.path.join(features_path, 'x_train.pkl'), 'rb') as f:

@@ -1,6 +1,7 @@
 import warnings
 warnings.filterwarnings("ignore")
 
+import os
 from sklearn.linear_model import Lasso
 from sklearn.feature_selection import RFE
 from sklearn.model_selection import cross_val_score
@@ -12,21 +13,6 @@ import pandas as pd
 import numpy as np
 import time
 
-# # загружаем telecom-vad
-# with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\vad_preprocessed.pkl", "rb") as f:                                                             # change path to base
-#     [x_train, x_test, y_train, y_test] = pickle.load(f)
-
-# попытка использовать IEMOCAP
-with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\iemocap_preprocessed.pkl", "rb") as f:
-    [x_train, x_test, y_train, y_test] = pickle.load(f)
-
-
-with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\logreg_features.pkl","rb") as f:
-    logreg_features = pickle.load(f)
-
-
-X = x_train.append(x_test, ignore_index=True)
-y = y_train.append(y_test)
 
 
 
@@ -34,6 +20,8 @@ y = y_train.append(y_test)
 # код взят здесь
 # https://nbviewer.jupyter.org/github/rasbt/pattern_classification/blob/master/dimensionality_reduction/feature_selection/sequential_selection_algorithms.ipynb
 def seq_forw_select(features, max_k, criterion_func, print_steps=False):
+    start_time = time.time()
+
     """
     Implementation of a Sequential Forward Selection algorithm.
 
@@ -57,17 +45,15 @@ def seq_forw_select(features, max_k, criterion_func, print_steps=False):
 
     loop = 0
     while True:
-        time_per_loop = []
-        scores_per_loop = []
-        distrib_per_loop = []
+
 
         # Inclusion step
         if print_steps:
             print('\nInclusion from feature space', features)
-        crit_func_max = criterion_func(feat_sub + [features[0]], [time_per_loop, scores_per_loop, distrib_per_loop])
+        crit_func_max = criterion_func(feat_sub + [features[0]])
         best_feat = features[0]
         for x in features[1:]:
-            crit_func_eval = criterion_func(feat_sub + [x], [time_per_loop, scores_per_loop, distrib_per_loop])
+            crit_func_eval = criterion_func(feat_sub + [x])
             print()
             if crit_func_eval > crit_func_max:
                 crit_func_max = crit_func_eval
@@ -82,43 +68,60 @@ def seq_forw_select(features, max_k, criterion_func, print_steps=False):
         if k == max_k:
             break
 
-        with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\gridy_info\gridy_info_{}.pkl".format(loop), "wb") as f:
-            pickle.dump([time_per_loop, scores_per_loop, distrib_per_loop], f)
         loop+=1
 
-
-
+    print("time of execution :", round(time.time()-start_time, 3))
     return feat_sub
 
 
 from lightgbm import LGBMClassifier
-clf = LGBMClassifier(boosting_type='gbdt', num_leaves=31, max_depth=-1, learning_rate=0.001, n_estimators=1000,
-                             objective=None, min_split_gain=0, min_child_weight=3, min_child_samples=10, subsample=0.8,
-                             subsample_freq=1, colsample_bytree=0.7, reg_alpha=0.3, reg_lambda=0, seed=17)
+clf = LGBMClassifier(subsample=0.5, n_estimators=1500, min_split_gain=0, max_depth=4, learning_rate=1.0078595144150302, colsample_bytree=0.625)
 
 
-def criterion_func(features, check_info):
-    time_per_loop, scores_per_loop, distrib_per_loop = check_info
-    # clf = SVC(gamma=0.1, C=10)
+def criterion_func(features):
     start_time = time.time()
-
-    clf.fit(x_train, y_train)
-    pred = clf.predict(x_test)
-
-
-    score = f1_score(pred,y_test, average='macro')
-    exec_time = time.time()-start_time
-
-
-    print(np.unique(pred, return_counts=True))
-    print("score: ", round(score,3))
-    print("time of execution :", round(exec_time,3))
-
-
-    time_per_loop.append(exec_time)
-    scores_per_loop.append(score)
-    distrib_per_loop.append(np.unique(pred, return_counts=True))
+    score = cross_val_score(clf, X, y, scoring='f1_macro', cv=3)
+    print("time of execution :", round(time.time()-start_time, 3))
 
     return score
 
-seq_forw_select(logreg_features, 10, criterion_func, print_steps=True)
+
+
+
+for file in os.listdir(r'C:\Users\kotov-d\Documents\TASKS\feature_selection\calculated_features'):
+    print(file[:-4])
+    with open(os.path.join(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\calculated_features", file), "rb") as f:
+        [x_train, x_test, y_train, y_test] = pickle.load(f)
+
+    X = x_train.append(x_test, ignore_index=True)
+    y = y_train.append(y_test)
+
+    clf.fit(X,y)
+    dict_importance = {}
+    for feature, importance in zip(X.columns, clf.feature_importances_):
+        dict_importance[feature] = importance
+
+    best_lgbm_features = []
+
+    for idx, w in enumerate(sorted(dict_importance, key=dict_importance.get, reverse=True)):
+        if idx==1000:
+            break
+        best_lgbm_features.append(w)
+
+    X_best = X.loc[:,best_lgbm_features]
+
+
+    best_features = seq_forw_select(list(X.columns), 10, criterion_func, print_steps=True)
+
+    with open(os.path.join(r'C:\Users\kotov-d\Documents\TASKS\feature_selection\grid_alg_results', 'best_features_'+file), "wb") as f:
+        pickle.dump([x_train, x_test, y_train, y_test], f)
+
+
+
+
+
+
+
+
+
+
