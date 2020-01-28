@@ -7,7 +7,10 @@ from sklearn.feature_selection import RFE
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import f1_score, classification_report, precision_score
 
-from sklearn.svm import SVC
+from prepare_data_with_two_labels import load_iemocap, load_general, prep_all_data
+
+from sklearn.ensemble import RandomForestClassifier
+
 import pickle
 import pandas as pd
 import numpy as np
@@ -48,8 +51,6 @@ def seq_forw_select(features, max_k, criterion_func, print_steps=False):
 
 
         # Inclusion step
-        if print_steps:
-            print('\nInclusion from feature space', features)
         crit_func_max = criterion_func(feat_sub + [features[0]])
         best_feat = features[0]
         for x in features[1:]:
@@ -60,7 +61,7 @@ def seq_forw_select(features, max_k, criterion_func, print_steps=False):
                 best_feat = x
         feat_sub.append(best_feat)
         if print_steps:
-            print('include: {} -> feature subset: {}'.format(best_feat, feat_sub))
+            print('include: {}'.format(best_feat))
         features.remove(best_feat)
 
         # Termination condition
@@ -75,46 +76,83 @@ def seq_forw_select(features, max_k, criterion_func, print_steps=False):
 
 
 from lightgbm import LGBMClassifier
-clf = LGBMClassifier(subsample=0.5, n_estimators=1500, min_split_gain=0, max_depth=4, learning_rate=1.0078595144150302, colsample_bytree=0.625)
+
 
 
 def criterion_func(features):
-    start_time = time.time()
-    score = cross_val_score(clf, X, y, scoring='f1_macro', cv=3)
-    print("time of execution :", round(time.time()-start_time, 3))
+    # start_time = time.time()
+    score = np.mean(cross_val_score(clf, X.loc[:,features], y, scoring='f1_macro', cv=3))
+    # print(score)
+    # print("time of execution :", round(time.time()-start_time, 3))
 
     return score
 
 
 
 
-for file in os.listdir(r'C:\Users\kotov-d\Documents\TASKS\feature_selection\calculated_features'):
-    print(file[:-4])
-    with open(os.path.join(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\calculated_features", file), "rb") as f:
-        [x_train, x_test, y_train, y_test] = pickle.load(f)
+# for file in os.listdir(r'C:\Users\kotov-d\Documents\TASKS\feature_selection\small_features'):
+#     print(file[2:-4])
+#     with open(os.path.join(r'C:\Users\kotov-d\Documents\TASKS\feature_selection\small_features', file), "rb") as f:
+#         [x_train, x_test, y_train, y_test] = pickle.load(f)
+with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\all_data.pkl", "rb") as f:
+    [x_train, x_test, y_train, y_test] = pickle.load(f)
 
-    X = x_train.append(x_test, ignore_index=True)
-    y = y_train.append(y_test)
+X = x_train.append(x_test, ignore_index=True)
+y = y_train.append(y_test)
+#=======================================================================================
+start_time = time.time()
 
-    clf.fit(X,y)
-    dict_importance = {}
-    for feature, importance in zip(X.columns, clf.feature_importances_):
-        dict_importance[feature] = importance
-
-    best_lgbm_features = []
-
-    for idx, w in enumerate(sorted(dict_importance, key=dict_importance.get, reverse=True)):
-        if idx==1000:
-            break
-        best_lgbm_features.append(w)
-
-    X_best = X.loc[:,best_lgbm_features]
+clf = LGBMClassifier(subsample=1.0, n_estimators=10, min_split_gain=0, max_depth=8, learning_rate=0.01,
+                     colsample_bytree=0.7, num_leaves=65)
+clf.fit(X,y)
+dict_importance = {}
+for feature, importance in zip(X.columns, clf.feature_importances_):
+    dict_importance[feature] = importance
 
 
-    best_features = seq_forw_select(list(X.columns), 10, criterion_func, print_steps=True)
+df = pd.DataFrame(columns=['feature','importance'])
+df['feature'], df['importance'] = X.columns, clf.feature_importances_
+df.sort_values(by='importance', inplace=True)
 
-    with open(os.path.join(r'C:\Users\kotov-d\Documents\TASKS\feature_selection\grid_alg_results', 'best_features_'+file), "wb") as f:
-        pickle.dump([x_train, x_test, y_train, y_test], f)
+df.iloc[:1000,:].to_csv(r'C:\Users\kotov-d\Documents\TASKS\feature_selection\xgb_all_range.csv')
+print("time of execution :", round(time.time()-start_time, 3))
+
+
+# =======================================================================================
+start_time = time.time()
+
+clf2 = RandomForestClassifier(n_estimators=10,
+                              max_depth=8,
+                              max_features='sqrt')
+clf.fit(X, y)
+dict_importance2 = {}
+for feature, importance in zip(X.columns, clf.feature_importances_):
+    dict_importance[feature] = importance
+
+
+df = pd.DataFrame(columns=['feature', 'importance'])
+df['feature'], df['importance'] = X.columns, clf.feature_importances_
+df.sort_values(by='importance', inplace=True)
+
+df.iloc[:1000, :].to_csv(r'C:\Users\kotov-d\Documents\TASKS\feature_selection\forest_all_range.csv')
+print("time of execution :", round(time.time()-start_time, 3))
+
+
+# =======================================================================================
+best_lgbm_features = []
+
+for idx, w in enumerate(sorted(dict_importance, key=dict_importance.get, reverse=True)):
+    if idx==500:
+        break
+    best_lgbm_features.append(w)
+
+X_best = X.loc[:,best_lgbm_features]
+
+
+best_features = seq_forw_select(best_lgbm_features, 500, criterion_func, print_steps=True)
+
+with open(os.path.join(r'C:\Users\kotov-d\Documents\TASKS\feature_selection\grid_alg_results', 'all_best_features'), "wb") as f:
+    pickle.dump([x_train, x_test, y_train, y_test], f)
 
 
 

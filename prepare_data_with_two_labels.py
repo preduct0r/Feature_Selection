@@ -3,6 +3,31 @@ import pickle
 import numpy as np
 import pandas as pd
 
+def prep_all_data():
+    main_path = r'C:\Users\kotov-d\Documents\TASKS\feature_selection\small_features'
+    for idx,i in enumerate(os.listdir(main_path)):
+        feature_path = os.path.join(main_path, i)
+        if idx==0:
+            with open(feature_path, "rb") as f:
+                [x_train, x_test, y_train, y_test] = pickle.load(f)
+                x_train.columns = [i[2:-4]+'_'+str(x) for x in x_train.columns]
+                x_test.columns = [i[2:-4]+'_'+str(x) for x in x_test.columns]
+
+        else:
+            with open(feature_path, "rb") as f:
+                [x_train_, x_test_, y_train_, y_test_] = pickle.load(f)
+                x_train_.columns = [i[2:-4] + '_' + str(x) for x in x_train_.columns]
+                x_test_.columns = [i[2:-4] + '_' + str(x) for x in x_test_.columns]
+            x_train = pd.concat([x_train, x_train_], axis=1)
+            x_test = pd.concat([x_test, x_test_], axis=1)
+    with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\all_data.pkl", "wb") as f:
+        pickle.dump([x_train, x_test, y_train, y_test], f)
+
+
+
+
+
+
 
 def load_vad():
     base_dir = r'C:\Users\kotov-d\Documents\BASES'                                                   # path_to_bases
@@ -90,7 +115,7 @@ def load_general(xXx):
     y_test = x_test.target
     x_test.drop(columns=['target'], inplace=True)
 
-    path_to_save_dir = r"C:\Users\kotov-d\Documents\TASKS\feature_selection\features_to_calc"
+    path_to_save_dir = r"C:\Users\kotov-d\Documents\TASKS\feature_selection\small_features"
     path_to_save_file = os.path.join(path_to_save_dir, xXx + ".pkl")
     with open(path_to_save_file, "wb") as f:
         pickle.dump([x_train, x_test, y_train, y_test], f)

@@ -1,6 +1,6 @@
 import os
 import pickle
-from prepare_data_with_two_labels import load_iemocap, load_general
+from prepare_data_with_two_labels import load_iemocap, load_general, prep_all_data
+import xgboost
 
-for folder in os.listdir(r'C:\Users\kotov-d\Documents\TASKS\feature_selection\calculated_features'):
-    print(folder)
+[x_train, x_test, y_train, y_test] =  prep_all_data()
