@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt
 import matplotlib
 matplotlib.use('TkAgg')
 
-with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\vad_preprocessed.pkl", "rb") as f:                                                             # change path to base
+with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\all_data.pkl", "rb") as f:                                                             # change path to base
     [x_train, x_test, y_train, y_test] = pickle.load(f)
 
 X = x_train.append(x_test, ignore_index=True)
@@ -19,7 +19,7 @@ y = y_train.append(y_test)
 mutual_info = pd.DataFrame(columns=['feature', 'mi'], index=list(x_train.columns))
 mutual_info['feature'] = list(x_train.columns)
 for idx, row in mutual_info.iterrows():
-    mutual_info.loc[idx, 'mi'] = mutual_info_score(X.loc[:,int(row[0])], y)
+    mutual_info.loc[idx, 'mi'] = mutual_info_score(X.loc[:,row[0]], y)
 
 mutual_info.to_csv(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\mutual_info.csv", index=False)
 

@@ -13,28 +13,38 @@ from sklearn.cluster import DBSCAN
 
 
 # достаем train, test данные
-with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\vad_preprocessed.pkl", "rb") as f:                                                             # change path to base
+with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\all_data.pkl", "rb") as f:                                                             # change path to base
     [x_train, x_test, y_train, y_test] = pickle.load(f)
 
+X = x_train.append(x_test, ignore_index=True)
+y = y_train.append(y_test, ignore_index=True)
+y = y.loc[:,'cur_label']
+
+X.fillna(0, inplace=True)
+
+
+
 vecs = []
-for i in range(x_train.shape[1]):
-    if x_train.iloc[:,i].isna().any()==True:
+for i in range(X.shape[1]):
+    if X.iloc[:,i].isna().any()==True:
         print(i)
-    vecs.append(x_train.iloc[:,i])
-corr_matrix = pd.DataFrame(np.corrcoef(vecs))
+    vecs.append(X.iloc[:,i])
+
+corr_matrix = pd.DataFrame(np.corrcoef(vecs), index=X.columns, columns=X.columns)
+corr_matrix.fillna(1, inplace=True)
 
 
 def func(x):
     return 1-abs(x)
 
-# почему-то 0 и 1512 фича считаются некорректно
-corr_matrix = func(corr_matrix.drop(columns=[0,1512], index=[0,1512]))                # почему в одном месте 1512, в другом 1511?
-
-# разбиваем фичи по кластерам
-feature_indexes = list(range(x_train.shape[1]))
-del feature_indexes[0]
-# сначала удалили 0, поэтому 1511 вместо 1512
-del feature_indexes[1511]
+# # почему-то 0 и 1512 фича считаются некорректно
+# corr_matrix = func(corr_matrix.drop(columns=[0,1512], index=[0,1512]))                 # почему в одном месте 1512, в другом 1511?
+#
+# # разбиваем фичи по кластерам
+# feature_indexes = list(range(x_train.shape[1]))
+# del feature_indexes[0]
+# # сначала удалили 0, поэтому 1511 вместо 1512
+# del feature_indexes[1511]
 
 
 # Делаем кастомную affinity func
@@ -59,7 +69,7 @@ cluster.fit(corr_matrix)                                                        
 
 # Делаю сводную таблицу соответствия фичей и лэйблов
 clustering_labels = pd.DataFrame(columns=['feature', 'label'])
-clustering_labels['feature'] = feature_indexes
+clustering_labels['feature'] = X.columns
 clustering_labels['label'] = cluster.labels_
 
 
@@ -86,12 +96,10 @@ for name,group in grouped:
    curr_idx = df_clusters_info[df_clusters_info.label == name].index[0]
    df_clusters_info.loc[curr_idx,:] = [round(meann,3), round(maxx,3), round(stdd,3), name]
    max_index = summ.idxmax()
-   if name==-1:
-       not_corr_idxs = list(group_corr_matrix.index)
-   else:
-       best_indexes.append(max_index)
-best_indexes += not_corr_idxs
-best_vecs = [vecs[x] for x in best_indexes]
+
+   best_indexes.append(max_index)
+num_indexes = [i for i, e in enumerate(list(X.columns)) if e in best_indexes]
+best_vecs = [vecs[x] for x in num_indexes]
 zz = pd.DataFrame(data=abs(np.corrcoef(best_vecs)), index=best_indexes, columns=best_indexes)
 
 

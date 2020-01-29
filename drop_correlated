@@ -1,0 +1,27 @@
+import numpy as np
+import pickle
+
+with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\all_data.pkl", "rb") as f:                                                             # change path to base
+    [x_train, x_test, y_train, y_test] = pickle.load(f)
+
+X = x_train.append(x_test, ignore_index=True)
+y = y_train.append(y_test, ignore_index=True)
+y = y.loc[:,'cur_label']
+
+X.fillna(0, inplace=True)
+
+# Create correlation matrix
+corr_matrix = X.corr().abs()
+
+# Select upper triangle of correlation matrix
+upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(np.bool))
+
+# Find features with correlation greater than 0.95
+to_drop = [column for column in upper.columns if any(upper[column] > 0.9)]
+
+# Drop features
+X.drop(to_drop, axis=1, inplace=True)
+
+print(X.shape)
+with open(r"C:\Users\kotov-d\Documents\TASKS\feature_selection\not_correlated_X_columns.pkl","wb") as f:
+    pickle.dump(list(X.columns), f)
